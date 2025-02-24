@@ -23,3 +23,5 @@ module "dockerized-web-app" {
   docker_image_tag    = "latest"
 }
 ```
+
+Your ALB will be deployed in a public subnet, but you will still have to add a security group rule that allows incoming connections coming from ranges outside of the internal CIDR-block.

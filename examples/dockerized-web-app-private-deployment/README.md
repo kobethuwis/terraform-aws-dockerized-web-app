@@ -1,3 +1,12 @@
+# Dockerized Web App Private Deployment
+
+This example demonstrates how to deploy a Dockerized web application using private subnets for both the application and load balancer. This setup ensures that your application is not directly accessible from the internet. In turn, you could use a AWS Route53 record to resolve the ALB DNS name internally.
+
+## Configuration
+
+To deploy this example, ensure you pass the private subnet ids to both the `app_subnet_ids` & `lb_subnet_id` inputs. 
+
+```hcl
 module "dockerized-web-app" {
   source              = "."
   region              = "eu-west-1"
@@ -13,3 +22,4 @@ module "dockerized-web-app" {
   full_name           = "my-dockerized-web-app"
   docker_image_tag    = "latest"
 }
+```

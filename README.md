@@ -36,7 +36,7 @@ Initialize the module using the required input arguments.
 ```hcl
 module "dockerized-web-app" {
   source  = "kobethuwis/dockerized-web-app/aws"
-  version = "2.1.2"
+  version = "2.1.9"
   ...
 }
 ```

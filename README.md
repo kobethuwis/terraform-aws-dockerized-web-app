@@ -16,6 +16,10 @@ The module supports both public facing and private facing deployments of the ALB
 - **AWS Services**: Leverage AWS services like ECS, EC2, ECR and ELB to host and manage your web application.
 - **Docker Support**: Build and deploy Docker images for your web application.
 
+## Diagram
+
+![dockerized-web-app-diagram](dockerized-web-app-diagram.png)
+
 ## Prerequisites
 
 - An AWS VPC with configured subnets.

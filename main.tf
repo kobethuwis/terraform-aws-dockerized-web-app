@@ -1,0 +1,278 @@
+resource "aws_security_group" "app_security_group" {
+  name_prefix = "${var.full_name}-app-sg"
+  vpc_id      = var.vpc_id
+
+  ingress {
+    from_port   = var.container_port
+    to_port     = var.container_port
+    protocol    = "tcp"
+    description = "HTTP traffic"
+    cidr_blocks = var.cidr_blocks
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    description = "All outbound traffic"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  tags = {
+    Name = "${var.full_name}-sg"
+  }
+}
+
+resource "aws_security_group" "lb_security_group" {
+  name_prefix = "${var.full_name}-lb-sg"
+  vpc_id      = var.vpc_id
+
+  ingress {
+    from_port   = 443
+    to_port     = 443
+    protocol    = "tcp"
+    description = "HTTPS traffic"
+    cidr_blocks = var.cidr_blocks
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    description = "All outbound traffic"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  tags = {
+    Name = "${var.full_name}-lb-sg"
+  }
+}
+
+resource "aws_iam_instance_profile" "iam_instance_profile" {
+  name = "ecs_instance_profile"
+  role = aws_iam_role.iam_role.name
+}
+
+resource "aws_iam_role" "iam_role" {
+  name = "ecs_iam_role"
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action    = ["sts:AssumeRole"]
+        Effect    = "Allow"
+        Principal = { "Service" = "ec2.amazonaws.com" }
+      },
+    ]
+  })
+}
+
+resource "aws_iam_role_policy_attachments_exclusive" "iam_role_policy_attachment_exclusive" {
+  role_name   = aws_iam_role.iam_role.name
+  policy_arns = [aws_iam_policy.iam_policy.arn, "arn:aws:iam::aws:policy/service-role/AmazonEC2ContainerServiceforEC2Role"]
+}
+
+resource "aws_iam_policy" "iam_policy" {
+  name   = "ecs_iam_policy"
+  policy = data.aws_iam_policy_document.iam_policy_document.json
+}
+
+resource "aws_launch_template" "launch_template" {
+  name                   = "${var.full_name}-launch-template"
+  image_id               = data.aws_ami.ami.id
+  key_name               = var.ec2_key_name
+  update_default_version = true
+  vpc_security_group_ids = [aws_security_group.app_security_group.id]
+  user_data              = base64encode(templatefile("${path.module}/user_data.sh", { cluster_name = var.full_name }))
+
+  iam_instance_profile {
+    name = aws_iam_instance_profile.iam_instance_profile.name
+  }
+
+  monitoring {
+    enabled = true
+  }
+
+  tag_specifications {
+    resource_type = "instance"
+    tags          = merge({ "Name" = var.full_name }, )
+  }
+}
+
+resource "aws_ecs_cluster" "ecs_cluster" {
+  name = var.full_name
+
+  configuration {
+    execute_command_configuration {
+      logging = "OVERRIDE"
+      log_configuration {
+        s3_bucket_name = var.logs_bucket_id
+        s3_key_prefix  = "${var.full_name}-ecs-cluster"
+      }
+    }
+  }
+
+  setting {
+    name  = "containerInsights"
+    value = "enabled"
+  }
+}
+
+resource "aws_lb_target_group" "lb_target_group" {
+  name     = "${var.full_name}-target-group"
+  port     = var.container_port
+  protocol = "HTTP"
+  vpc_id   = var.vpc_id
+
+  health_check {
+    port     = var.container_port
+    matcher  = "200,404"
+    protocol = "HTTP"
+  }
+}
+
+resource "aws_autoscaling_group" "autoscaling_group" {
+  desired_capacity      = 0
+  max_size              = 4
+  min_size              = 0
+  target_group_arns     = [aws_lb_target_group.lb_target_group.arn]
+  vpc_zone_identifier   = var.app_subnet_ids
+  protect_from_scale_in = true
+
+  mixed_instances_policy {
+    instances_distribution {
+      spot_allocation_strategy = "capacity-optimized"
+    }
+
+    launch_template {
+      launch_template_specification {
+        launch_template_id = aws_launch_template.launch_template.id
+        version            = aws_launch_template.launch_template.latest_version
+      }
+      override {
+        instance_type = "t3a.nano"
+      }
+      override {
+        instance_type = "t3.nano"
+      }
+    }
+  }
+
+  lifecycle {
+    ignore_changes = [desired_capacity, tag]
+  }
+}
+
+resource "aws_ecs_capacity_provider" "ecs_capacity_provider" {
+  name = "${var.full_name}-ecs-capacity-provider"
+
+  auto_scaling_group_provider {
+    auto_scaling_group_arn         = aws_autoscaling_group.autoscaling_group.arn
+    managed_termination_protection = "ENABLED"
+
+    managed_scaling {
+      maximum_scaling_step_size = 2
+      minimum_scaling_step_size = 1
+      status                    = "ENABLED"
+      target_capacity           = 100
+    }
+  }
+}
+
+resource "aws_ecs_cluster_capacity_providers" "ecs_cluster_capacity_providers" {
+  cluster_name = aws_ecs_cluster.ecs_cluster.name
+
+  capacity_providers = [aws_ecs_capacity_provider.ecs_capacity_provider.name]
+
+  default_capacity_provider_strategy {
+    base              = 1
+    weight            = 100
+    capacity_provider = aws_ecs_capacity_provider.ecs_capacity_provider.name
+  }
+}
+
+resource "aws_ecs_task_definition" "ecs_task_definition" {
+  family = var.full_name
+  container_definitions = jsonencode([
+    {
+      name      = "${var.full_name}"
+      image     = "${data.aws_ecr_repository.ecr_repository.repository_url}:${var.docker_image_tag}"
+      cpu       = 2000
+      memory    = 400
+      essential = true
+      portMappings = [
+        {
+          containerPort = var.container_port
+          hostPort      = var.container_port
+        }
+      ]
+      healthCheck = {
+        command  = ["CMD-SHELL", "curl -f http://localhost:${var.container_port}/health || exit 1"]
+        interval = 10
+        timeout  = 5
+        retries  = 3
+      }
+
+      logConfiguration = {
+        logDriver = "awslogs"
+        options = {
+          "awslogs-create-group" = "true"
+          "awslogs-group"        = var.full_name
+          "awslogs-region"       = var.region
+        }
+      }
+    }
+  ])
+}
+
+resource "aws_lb" "lb" {
+  name               = "${var.full_name}-lb"
+  internal           = false
+  load_balancer_type = "application"
+  security_groups    = [aws_security_group.lb_security_group.id]
+  subnets            = var.lb_subnet_ids
+
+  access_logs {
+    bucket  = var.logs_bucket_id
+    prefix  = "${var.full_name}-lb/access-logs"
+    enabled = true
+  }
+
+  connection_logs {
+    prefix  = "${var.full_name}-lb/connection-logs"
+    bucket  = var.logs_bucket_id
+    enabled = true
+  }
+}
+
+resource "aws_lb_listener" "lb_listener" {
+  load_balancer_arn = aws_lb.lb.arn
+  port              = 443
+  protocol          = "HTTPS"
+  certificate_arn   = var.ssl_certificate_arn
+
+  default_action {
+    type             = "forward"
+    target_group_arn = aws_lb_target_group.lb_target_group.arn
+  }
+}
+
+resource "aws_ecs_service" "ecs_service" {
+  name            = "${var.full_name}-ecs-service"
+  cluster         = aws_ecs_cluster.ecs_cluster.id
+  task_definition = aws_ecs_task_definition.ecs_task_definition.id
+  desired_count   = 2
+
+  load_balancer {
+    target_group_arn = aws_lb_target_group.lb_target_group.arn
+    container_name   = var.full_name
+    container_port   = var.container_port
+  }
+
+  lifecycle {
+    ignore_changes = [
+      capacity_provider_strategy,
+      task_definition
+    ]
+  }
+}

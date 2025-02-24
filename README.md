@@ -18,7 +18,7 @@ The module supports both public facing and private facing deployments of the ALB
 
 ## Diagram
 
-![dockerized-web-app-diagram](dockerized-web-app-diagram.png)
+![dockerized-web-app-diagram](https://raw.githubusercontent.com/kobethuwis/terraform-aws-dockerized-web-app/edd8948b48bb47308130f43dacc6a7bd5c4fb3af/dockerized-web-app-diagram.png)
 
 ## Prerequisites
 

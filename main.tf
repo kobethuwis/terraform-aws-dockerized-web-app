@@ -1,3 +1,16 @@
+terraform {
+  required_providers {
+    aws = {
+      source  = "hashicorp/aws"
+      version = "~> 5.80.0"
+    }
+    awscc = {
+      source  = "hashicorp/awscc"
+      version = "~> 1.23.0"
+    }
+  }
+}
+
 resource "aws_security_group" "app_security_group" {
   name_prefix = "${var.full_name}-app-sg"
   vpc_id      = var.vpc_id

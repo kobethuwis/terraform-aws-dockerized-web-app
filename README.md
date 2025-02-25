@@ -50,7 +50,7 @@ module "dockerized-web-app" {
   ecr_repository_name = "my-ecr-repo"
   full_name           = "my-dockerized-web-app"
   docker_image_tag    = "latest"
-  tags                = "{my_tag = "dockerized-web-app"}"
+  tags                = "{my_tag = 'dockerized-web-app'}"
 }
 ```
 

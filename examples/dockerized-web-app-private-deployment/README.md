@@ -1,10 +1,10 @@
 # Dockerized Web App Private Deployment
 
-This example demonstrates how to deploy a Dockerized web application using private subnets for both the application and load balancer. This setup ensures that your application is not directly accessible from the internet. In turn, you could use a AWS Route53 record to resolve the ALB DNS name internally.
+This example demonstrates how to deploy a Dockerized web application using private subnets for both the application and load balancer. This setup ensures that your application is not directly accessible from the internet and your ALB is deployed internally. In turn, you could use a AWS Route53 record to resolve the ALB DNS name internally.
 
 ## Configuration
 
-To deploy this example, ensure you pass the private subnet ids to both the `app_subnet_ids` & `lb_subnet_id` inputs. 
+To deploy this example, ensure you pass the private subnet ids to both the `app_subnet_ids` & `lb_subnet_id` inputs. If the 2 vars are the same, Terraform will provision an internal ALB.
 
 ```hcl
 module "dockerized-web-app" {

@@ -64,12 +64,12 @@ resource "aws_security_group" "lb_security_group" {
 }
 
 resource "aws_iam_instance_profile" "iam_instance_profile" {
-  name = "ecs_instance_profile"
+  name = "${var.full_name}-ecs-instance-profile"
   role = aws_iam_role.iam_role.name
 }
 
 resource "aws_iam_role" "iam_role" {
-  name = "ecs_iam_role"
+  name = "${var.full_name}-ecs-iam-role"
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
     Statement = [
@@ -88,7 +88,7 @@ resource "aws_iam_role_policy_attachments_exclusive" "iam_role_policy_attachment
 }
 
 resource "aws_iam_policy" "iam_policy" {
-  name   = "ecs_iam_policy"
+  name   = "${var.full_name}-ecs-iam-policy"
   policy = data.aws_iam_policy_document.iam_policy_document.json
 }
 
@@ -247,7 +247,7 @@ resource "aws_ecs_task_definition" "ecs_task_definition" {
 
 resource "aws_lb" "lb" {
   name               = "${var.full_name}-lb"
-  internal           = false
+  internal           = var.lb_subnet_ids == var.app_subnet_ids
   load_balancer_type = "application"
   security_groups    = [aws_security_group.lb_security_group.id]
   subnets            = var.lb_subnet_ids

@@ -45,3 +45,7 @@ variable "ecr_repository_name" {
 variable "docker_image_tag" {
   description = "Tag of the docker image"
 }
+
+variable "tags" {
+  description = "JSON object with tags for resources"
+}

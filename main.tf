@@ -18,9 +18,10 @@ resource "aws_security_group" "app_security_group" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 
-  tags = {
-    Name = "${var.full_name}-sg"
-  }
+  tags = merge(
+    { Name = "${var.full_name}-sg" },
+    var.tags
+  )
 }
 
 resource "aws_security_group" "lb_security_group" {
@@ -43,9 +44,10 @@ resource "aws_security_group" "lb_security_group" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 
-  tags = {
-    Name = "${var.full_name}-lb-sg"
-  }
+  tags = merge(
+    { Name = "${var.full_name}-lb-sg" },
+    var.tags
+  )
 }
 
 resource "aws_iam_instance_profile" "iam_instance_profile" {
@@ -95,7 +97,10 @@ resource "aws_launch_template" "launch_template" {
 
   tag_specifications {
     resource_type = "instance"
-    tags          = merge({ "Name" = var.full_name }, )
+    tags = merge(
+      { "Name" = var.full_name },
+      var.tags
+    )
   }
 }
 
@@ -116,6 +121,8 @@ resource "aws_ecs_cluster" "ecs_cluster" {
     name  = "containerInsights"
     value = "enabled"
   }
+
+  tags = var.tags
 }
 
 resource "aws_lb_target_group" "lb_target_group" {

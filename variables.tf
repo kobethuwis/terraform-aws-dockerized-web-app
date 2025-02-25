@@ -48,4 +48,5 @@ variable "docker_image_tag" {
 
 variable "tags" {
   description = "JSON object with tags for resources"
+  default     = {}
 }

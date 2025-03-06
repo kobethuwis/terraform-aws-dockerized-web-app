@@ -33,8 +33,6 @@ resource "aws_vpc_security_group_ingress_rule" "app_security_group_ingress_rule"
 
 resource "aws_vpc_security_group_egress_rule" "app_security_group_egress_rule" {
   security_group_id = aws_security_group.app_security_group.id
-  from_port         = 0
-  to_port           = 0
   ip_protocol       = "-1"
   description       = "All outbound traffic"
   cidr_ipv4         = "0.0.0.0/0"
@@ -62,8 +60,6 @@ resource "aws_vpc_security_group_ingress_rule" "lb_security_group_ingress_rule" 
 
 resource "aws_vpc_security_group_egress_rule" "lb_security_group_egress_rule" {
   security_group_id = aws_security_group.lb_security_group.id
-  from_port         = 0
-  to_port           = 0
   ip_protocol       = "-1"
   description       = "All outbound traffic"
   cidr_ipv4         = "0.0.0.0/0"

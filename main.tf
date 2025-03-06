@@ -180,7 +180,10 @@ resource "aws_autoscaling_group" "autoscaling_group" {
   }
 
   lifecycle {
-    ignore_changes = [desired_capacity]
+    ignore_changes = [
+      desired_capacity,
+      tag
+    ]
   }
 }
 
@@ -296,6 +299,9 @@ resource "aws_ecs_service" "ecs_service" {
   }
 
   lifecycle {
-    ignore_changes = [task_definition]
+    ignore_changes = [
+      capacity_provider_strategy,
+      task_definition
+    ]
   }
 }

@@ -3,6 +3,11 @@ output "load_balancer" {
   value       = aws_lb.lb
 }
 
+output "app_security_group" {
+  description = "Security group for the application resource"
+  value       = aws_security_group.app_security_group
+}
+
 output "lb_security_group" {
   description = "Security group for the load balancer resource"
   value       = aws_security_group.lb_security_group

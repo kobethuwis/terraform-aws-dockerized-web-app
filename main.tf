@@ -15,52 +15,56 @@ resource "aws_security_group" "app_security_group" {
   name_prefix = "${var.full_name}-app-sg"
   vpc_id      = var.vpc_id
 
-  ingress {
-    from_port   = var.container_port
-    to_port     = var.container_port
-    protocol    = "tcp"
-    description = "HTTP traffic"
-    cidr_blocks = var.cidr_blocks
-  }
-
-  egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    description = "All outbound traffic"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
   tags = merge(
     { Name = "${var.full_name}-sg" },
     var.tags
   )
 }
 
+resource "aws_vpc_security_group_ingress_rule" "app_security_group_ingress_rule" {
+  security_group_id = aws_security_group.app_security_group.id
+  from_port         = var.container_port
+  to_port           = var.container_port
+  ip_protocol       = "tcp"
+  description       = "HTTP traffic"
+  cidr_ipv4         = var.cidr_blocks
+}
+
+resource "aws_vpc_security_group_egress_rule" "app_security_group_egress_rule" {
+  security_group_id = aws_security_group.app_security_group.id
+  from_port         = 0
+  to_port           = 0
+  ip_protocol       = "-1"
+  description       = "All outbound traffic"
+  cidr_ipv4         = ["0.0.0.0/0"]
+}
+
 resource "aws_security_group" "lb_security_group" {
   name_prefix = "${var.full_name}-lb-sg"
   vpc_id      = var.vpc_id
-
-  ingress {
-    from_port   = 443
-    to_port     = 443
-    protocol    = "tcp"
-    description = "HTTPS traffic"
-    cidr_blocks = var.cidr_blocks
-  }
-
-  egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    description = "All outbound traffic"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
 
   tags = merge(
     { Name = "${var.full_name}-lb-sg" },
     var.tags
   )
+}
+
+resource "aws_vpc_security_group_ingress_rule" "lb_security_group_ingress_rule" {
+  security_group_id = aws_security_group.lb_security_group.id
+  from_port         = 443
+  to_port           = 443
+  ip_protocol       = "tcp"
+  description       = "HTTPS traffic"
+  cidr_ipv4         = var.cidr_blocks
+}
+
+resource "aws_vpc_security_group_egress_rule" "lb_security_group_egress_rule" {
+  security_group_id = aws_security_group.lb_security_group.id
+  from_port         = 0
+  to_port           = 0
+  ip_protocol       = "-1"
+  description       = "All outbound traffic"
+  cidr_ipv4         = ["0.0.0.0/0"]
 }
 
 resource "aws_iam_instance_profile" "iam_instance_profile" {

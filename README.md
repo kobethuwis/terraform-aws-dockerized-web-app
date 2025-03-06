@@ -36,7 +36,7 @@ Initialize the module using the required input arguments.
 ```hcl
 module "dockerized-web-app" {
   source              = "kobethuwis/dockerized-web-app/aws"
-  version             = "2.2.3"
+  version             = "2.2.4"
   source              = "."
   region              = "eu-west-1"
   ec2_key_name        = "my-aws-key-pair"
@@ -56,4 +56,4 @@ module "dockerized-web-app" {
 
 ## License
 
-This project is licensed under the MIT License.
+This project is licensed under the MIT License and written by ![kobethuwis](https://kobethuwis.com).

@@ -157,7 +157,6 @@ resource "aws_autoscaling_group" "autoscaling_group" {
   desired_capacity      = 0
   max_size              = 4
   min_size              = 0
-  target_group_arns     = [aws_lb_target_group.lb_target_group.arn]
   vpc_zone_identifier   = var.app_subnet_ids
   protect_from_scale_in = true
 
@@ -181,8 +180,13 @@ resource "aws_autoscaling_group" "autoscaling_group" {
   }
 
   lifecycle {
-    ignore_changes = [desired_capacity, tag]
+    ignore_changes = [desired_capacity]
   }
+}
+
+resource "aws_autoscaling_attachment" "lb_target_group_attachment" {
+  lb_target_group_arn    = aws_lb_target_group.lb_target_group.arn
+  autoscaling_group_name = aws_autoscaling_group.autoscaling_group.id
 }
 
 resource "aws_ecs_capacity_provider" "ecs_capacity_provider" {
@@ -292,9 +296,6 @@ resource "aws_ecs_service" "ecs_service" {
   }
 
   lifecycle {
-    ignore_changes = [
-      capacity_provider_strategy,
-      task_definition
-    ]
+    ignore_changes = [task_definition]
   }
 }

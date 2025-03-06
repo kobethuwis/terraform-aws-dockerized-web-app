@@ -50,3 +50,8 @@ variable "tags" {
   description = "JSON object with tags for resources"
   default     = {}
 }
+
+variable "disable_health_checks" {
+  description = "Disable health checks for the application"
+  default     = false
+}

@@ -228,7 +228,7 @@ resource "aws_ecs_task_definition" "ecs_task_definition" {
           hostPort      = var.container_port
         }
       ]
-      healthCheck = {
+      healthCheck = var.disable_health_checks ? null : {
         command  = ["CMD-SHELL", "curl -f http://localhost:${var.container_port}/health || exit 1"]
         interval = 10
         timeout  = 5

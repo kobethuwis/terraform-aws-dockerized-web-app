@@ -141,7 +141,7 @@ resource "aws_ecs_cluster" "ecs_cluster" {
 }
 
 resource "aws_lb_target_group" "lb_target_group" {
-  name     = "${var.full_name}-target-group"
+  name     = "${var.full_name}-tg"
   port     = var.container_port
   protocol = "HTTP"
   vpc_id   = var.vpc_id

@@ -15,7 +15,7 @@ The module supports both public facing and private facing deployments of the ALB
 - **CI/CD Integration**: Integrate with GitHub Actions to automate the deployment process, including building Docker images and deploying them to different environments.
 - **AWS Services**: Leverage AWS services like ECS, EC2, ECR and ELB to host and manage your web application.
 - **Docker Support**: Build and deploy Docker images for your web application.
-- **Health Checker**: ECS does a basic health check on /health endpoint to determine if the containers are actually running.
+- **Health Checker**: ECS does a basic health check on /health endpoint to determine if the containers are actually running (optional).
 
 ## Diagram
 

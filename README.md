@@ -13,6 +13,7 @@ The module supports both public facing and private facing deployments of the ALB
 - **HTTPS-terminated Load Balancing**: Automatically terminate incoming requests using an SSL certificate, without making changes to your base application.
 - **Infrastructure Provisioning**: Use Terraform to define and provision the infrastructure required for your web application.
 - **CI/CD Integration**: Integrate with GitHub Actions to automate the deployment process, including building Docker images and deploying them to different environments.
+- **Multi-container-ports**: Expose multiple container ports and automatically configure routing, target groups & internal communication.
 - **AWS Services**: Leverage AWS services like ECS, EC2, ECR and ELB to host and manage your web application.
 - **Docker Support**: Build and deploy Docker images for your web application.
 - **Health Checker**: ECS does a basic health check on /health endpoint to determine if the containers are actually running (optional).
@@ -35,22 +36,22 @@ Initialize the module using the required input arguments.
 
 ```hcl
 module "dockerized-web-app" {
-  source              = "kobethuwis/dockerized-web-app/aws"
-  version             = "2.3.0"
-  source              = "."
-  region              = "eu-west-1"
-  ec2_key_name        = "my-aws-key-pair"
-  ssl_certificate_arn = "arn:aws:acm:eu-west-1:XXXXXXXXXX:certificate/XXXXXXXXXX"
-  app_subnet_ids      = ["subnet-private-1", "subnet-private-2"]
-  lb_subnet_ids       = ["subnet-private-1", "subnet-private-2"]
-  vpc_id              = "my-vpc"
-  logs_bucket_id      = "my-logs-bucket"
-  cidr_blocks         = "10.0.0.0/24"
-  container_port      = 8080
-  ecr_repository_name = "my-ecr-repo"
-  full_name           = "my-dockerized-web-app"
-  docker_image_tag    = "latest"
-  tags                = "{my_tag = 'dockerized-web-app'}"
+  source               = "kobethuwis/dockerized-web-app/aws"
+  version              = "2.3.1"
+  source               = "."
+  region               = "eu-west-1"
+  ec2_key_name         = "my-aws-key-pair"
+  ssl_certificate_arn  = "arn:aws:acm:eu-west-1:XXXXXXXXXX:certificate/XXXXXXXXXX"
+  app_subnet_ids       = ["subnet-private-1", "subnet-private-2"]
+  lb_subnet_ids        = ["subnet-private-1", "subnet-private-2"]
+  vpc_id               = "my-vpc"
+  logs_bucket_id       = "my-logs-bucket"
+  cidr_blocks          = "10.0.0.0/24"
+  container_ports      = [8080]
+  ecr_repository_name  = "my-ecr-repo"
+  full_name            = "my-dockerized-web-app"
+  docker_image_tag     = "latest"
+  tags                 = "{my_tag = 'dockerized-web-app'}"
 }
 ```
 

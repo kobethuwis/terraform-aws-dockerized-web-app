@@ -22,13 +22,24 @@ resource "aws_security_group" "app_security_group" {
 }
 
 resource "aws_vpc_security_group_ingress_rule" "app_security_group_ingress_rule" {
-  for_each          = toset(var.cidr_blocks)
+  for_each = {
+    for pair in flatten([
+      for cidr in var.cidr_blocks : [
+        for port in var.container_ports : {
+          key  = "${cidr}-${port}"
+          cidr = cidr
+          port = port
+        }
+      ]
+    ]) : pair.key => pair
+  }
+
   security_group_id = aws_security_group.app_security_group.id
-  from_port         = var.container_port
-  to_port           = var.container_port
+  from_port         = each.value.port
+  to_port           = each.value.port
   ip_protocol       = "tcp"
   description       = "HTTP traffic"
-  cidr_ipv4         = each.value
+  cidr_ipv4         = each.value.cidr
 }
 
 resource "aws_vpc_security_group_egress_rule" "app_security_group_egress_rule" {
@@ -141,13 +152,14 @@ resource "aws_ecs_cluster" "ecs_cluster" {
 }
 
 resource "aws_lb_target_group" "lb_target_group" {
-  name     = "${var.full_name}-tg"
-  port     = var.container_port
+  for_each = toset([for port in var.container_ports : tostring(port)])
+  name     = "${var.full_name}-tg-${each.value}"
+  port     = each.value
   protocol = "HTTP"
   vpc_id   = var.vpc_id
 
   health_check {
-    port     = var.container_port
+    port     = tonumber(each.value)
     matcher  = "200,404"
     protocol = "HTTP"
   }
@@ -188,7 +200,8 @@ resource "aws_autoscaling_group" "autoscaling_group" {
 }
 
 resource "aws_autoscaling_attachment" "lb_target_group_attachment" {
-  lb_target_group_arn    = aws_lb_target_group.lb_target_group.arn
+  for_each               = aws_lb_target_group.lb_target_group
+  lb_target_group_arn    = each.value.arn
   autoscaling_group_name = aws_autoscaling_group.autoscaling_group.id
 }
 
@@ -230,13 +243,13 @@ resource "aws_ecs_task_definition" "ecs_task_definition" {
       memory    = 400
       essential = true
       portMappings = [
-        {
-          containerPort = var.container_port
-          hostPort      = var.container_port
+        for port in var.container_ports : {
+          containerPort = port
+          hostPort      = port
         }
       ]
       healthCheck = var.disable_health_checks ? null : {
-        command  = ["CMD-SHELL", "curl -f http://localhost:${var.container_port}/health || exit 1"]
+        command  = ["CMD-SHELL", "curl -f http://localhost:${var.container_ports[0]}/health || exit 1"]
         interval = 10
         timeout  = 5
         retries  = 3
@@ -282,7 +295,7 @@ resource "aws_lb_listener" "lb_listener" {
 
   default_action {
     type             = "forward"
-    target_group_arn = aws_lb_target_group.lb_target_group.arn
+    target_group_arn = values(aws_lb_target_group.lb_target_group)[0].arn
   }
 }
 
@@ -293,9 +306,9 @@ resource "aws_ecs_service" "ecs_service" {
   desired_count   = 2
 
   load_balancer {
-    target_group_arn = aws_lb_target_group.lb_target_group.arn
+    target_group_arn = values(aws_lb_target_group.lb_target_group)[0].arn
     container_name   = var.full_name
-    container_port   = var.container_port
+    container_port   = var.container_ports[0]
   }
 
   lifecycle {

@@ -19,7 +19,7 @@ output "load_balancer_listener" {
   value       = aws_lb_listener.lb_listener
 }
 
-output "target_group" {
+output "target_groups" {
   description = "Target group resource"
   value       = aws_lb_target_group.lb_target_group
 }

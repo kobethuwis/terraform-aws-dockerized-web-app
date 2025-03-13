@@ -22,8 +22,8 @@ variable "lb_subnet_ids" {
   description = "IDs of the subnets for the load balancer"
 }
 
-variable "container_port" {
-  description = "Port which is exposed in the container"
+variable "container_ports" {
+  description = "List of container ports to expose"
 }
 
 variable "ssl_certificate_arn" {

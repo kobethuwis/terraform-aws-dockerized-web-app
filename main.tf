@@ -79,6 +79,8 @@ resource "aws_vpc_security_group_egress_rule" "lb_security_group_egress_rule" {
 resource "aws_iam_instance_profile" "iam_instance_profile" {
   name = "${var.full_name}-ecs-instance-profile"
   role = aws_iam_role.iam_role.name
+
+  depends_on = [aws_iam_role.iam_role]
 }
 
 resource "aws_iam_role" "iam_role" {
@@ -98,6 +100,8 @@ resource "aws_iam_role" "iam_role" {
 resource "aws_iam_role_policy_attachments_exclusive" "iam_role_policy_attachment_exclusive" {
   role_name   = aws_iam_role.iam_role.name
   policy_arns = [aws_iam_policy.iam_policy.arn, "arn:aws:iam::aws:policy/service-role/AmazonEC2ContainerServiceforEC2Role"]
+
+  depends_on = [aws_iam_role.iam_role, aws_iam_policy.iam_policy]
 }
 
 resource "aws_iam_policy" "iam_policy" {
@@ -317,4 +321,11 @@ resource "aws_ecs_service" "ecs_service" {
       task_definition
     ]
   }
+
+  depends_on = [
+    aws_ecs_cluster.ecs_cluster,
+    aws_ecs_task_definition.ecs_task_definition,
+    aws_lb_target_group.lb_target_group,
+    aws_ecs_cluster_capacity_providers.ecs_cluster_capacity_providers
+  ]
 }

@@ -172,7 +172,7 @@ resource "aws_lb_target_group" "lb_target_group" {
 resource "aws_autoscaling_group" "autoscaling_group" {
   desired_capacity      = 0
   max_size              = 4
-  min_size              = 0
+  min_size              = 2
   vpc_zone_identifier   = var.app_subnet_ids
   protect_from_scale_in = true
 

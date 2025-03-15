@@ -37,7 +37,7 @@ Initialize the module using the required input arguments.
 ```hcl
 module "dockerized-web-app" {
   source               = "kobethuwis/dockerized-web-app/aws"
-  version              = "2.3.2"
+  version              = "2.3.3"
   source               = "."
   region               = "eu-west-1"
   ec2_key_name         = "my-aws-key-pair"

@@ -132,6 +132,12 @@ resource "aws_launch_template" "launch_template" {
       var.tags
     )
   }
+
+  lifecycle {
+    ignore_changes = [
+      image_id
+    ]
+  }
 }
 
 resource "aws_ecs_cluster" "ecs_cluster" {
@@ -198,7 +204,8 @@ resource "aws_autoscaling_group" "autoscaling_group" {
   lifecycle {
     ignore_changes = [
       desired_capacity,
-      tag
+      tag,
+      mixed_instances_policy
     ]
   }
 }

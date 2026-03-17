@@ -51,7 +51,21 @@ variable "tags" {
   default     = {}
 }
 
-variable "disable_health_checks" {
-  description = "Disable health checks for the application"
+variable "enable_container_health_checks" {
+  description = "Enable health checks for the container"
   default     = false
+}
+
+variable "container_insights_config" {
+  description = "Container insights configuration"
+  default     = "enabled"
+  validation {
+    condition     = contains(["enhanced", "enabled", "disabled"], var.container_insights_config)
+    error_message = "container_insights_config must be either 'enhanced' or 'enabled' or 'disabled'."
+  }
+}
+
+variable "health_check_command" {
+  description = "Command to use for health checks"
+  default     = null
 }

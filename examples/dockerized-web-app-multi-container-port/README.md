@@ -4,7 +4,7 @@ This example demonstrates how to set up the module for multiple container ports.
 
 ## Configuration
 
-To deploy this example, ensure you pass a second (or multiple) container port. The security group rules, autscaling target groups and attachments are made accordingly. Health checks and root balancing are always done on the first port!
+To deploy this example, ensure you pass a second (or multiple) container port. The security group rules, autscaling target groups and attachments are made accordingly.
 
 ```hcl
 module "dockerized-web-app" {
@@ -21,7 +21,6 @@ module "dockerized-web-app" {
   ecr_repository_name    = "my-ecr-repo"
   full_name              = "my-dockerized-web-app"
   docker_image_tag       = "latest"
-  disable_health_checks  = true
 }
 ```
 

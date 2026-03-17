@@ -79,8 +79,6 @@ resource "aws_vpc_security_group_egress_rule" "lb_security_group_egress_rule" {
 resource "aws_iam_instance_profile" "iam_instance_profile" {
   name = "${var.full_name}-ecs-instance-profile"
   role = aws_iam_role.iam_role.name
-
-  depends_on = [aws_iam_role.iam_role]
 }
 
 resource "aws_iam_role" "iam_role" {
@@ -97,11 +95,14 @@ resource "aws_iam_role" "iam_role" {
   })
 }
 
-resource "aws_iam_role_policy_attachments_exclusive" "iam_role_policy_attachment_exclusive" {
-  role_name   = aws_iam_role.iam_role.name
-  policy_arns = [aws_iam_policy.iam_policy.arn, "arn:aws:iam::aws:policy/service-role/AmazonEC2ContainerServiceforEC2Role"]
+resource "aws_iam_role_policy_attachment" "iam_role_policy_attachment" {
+  role       = aws_iam_role.iam_role.name
+  policy_arn = aws_iam_policy.iam_policy.arn
+}
 
-  depends_on = [aws_iam_role.iam_role, aws_iam_policy.iam_policy]
+resource "aws_iam_role_policy_attachment" "ecs_managed_policy_attachment" {
+  role       = aws_iam_role.iam_role.name
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonEC2ContainerServiceforEC2Role"
 }
 
 resource "aws_iam_policy" "iam_policy" {
@@ -132,12 +133,6 @@ resource "aws_launch_template" "launch_template" {
       var.tags
     )
   }
-
-  lifecycle {
-    ignore_changes = [
-      image_id
-    ]
-  }
 }
 
 resource "aws_ecs_cluster" "ecs_cluster" {
@@ -155,7 +150,7 @@ resource "aws_ecs_cluster" "ecs_cluster" {
 
   setting {
     name  = "containerInsights"
-    value = "enabled"
+    value = var.container_insights_config
   }
 
   tags = var.tags
@@ -168,7 +163,9 @@ resource "aws_lb_target_group" "lb_target_group" {
   protocol = "HTTP"
   vpc_id   = var.vpc_id
 
+  # load balancer health checks should always be done on all ports
   health_check {
+    path     = "/"
     port     = tonumber(each.value)
     matcher  = "200,404"
     protocol = "HTTP"
@@ -259,19 +256,21 @@ resource "aws_ecs_task_definition" "ecs_task_definition" {
           hostPort      = port
         }
       ]
-      healthCheck = var.disable_health_checks ? null : {
-        command  = ["CMD-SHELL", "curl -f http://localhost:${var.container_ports[0]}/health || exit 1"]
-        interval = 10
-        timeout  = 5
-        retries  = 3
-      }
+      healthCheck = var.enable_container_health_checks ? {
+        command  =  ["CMD-SHELL", var.health_check_command]
+        interval    = 10
+        timeout     = 5
+        retries     = 3
+        startPeriod = 30
+        } : null
 
       logConfiguration = {
         logDriver = "awslogs"
         options = {
-          "awslogs-create-group" = "true"
-          "awslogs-group"        = var.full_name
-          "awslogs-region"       = var.region
+          "awslogs-create-group"  = "true"
+          "awslogs-group"         = var.full_name
+          "awslogs-region"        = var.region
+          "awslogs-stream-prefix" = "aws-logs-${var.full_name}"
         }
       }
     }
@@ -328,11 +327,4 @@ resource "aws_ecs_service" "ecs_service" {
       task_definition
     ]
   }
-
-  depends_on = [
-    aws_ecs_cluster.ecs_cluster,
-    aws_ecs_task_definition.ecs_task_definition,
-    aws_lb_target_group.lb_target_group,
-    aws_ecs_cluster_capacity_providers.ecs_cluster_capacity_providers
-  ]
 }

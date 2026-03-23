@@ -11,44 +11,6 @@ terraform {
   }
 }
 
-resource "aws_security_group" "app_security_group" {
-  name_prefix = "${var.full_name}-app-sg"
-  vpc_id      = var.vpc_id
-
-  tags = merge(
-    { Name = "${var.full_name}-sg" },
-    var.tags
-  )
-}
-
-resource "aws_vpc_security_group_ingress_rule" "app_security_group_ingress_rule" {
-  for_each = {
-    for pair in flatten([
-      for cidr in var.cidr_blocks : [
-        for port in var.container_ports : {
-          key  = "${cidr}-${port}"
-          cidr = cidr
-          port = port
-        }
-      ]
-    ]) : pair.key => pair
-  }
-
-  security_group_id = aws_security_group.app_security_group.id
-  from_port         = each.value.port
-  to_port           = each.value.port
-  ip_protocol       = "tcp"
-  description       = "HTTP traffic"
-  cidr_ipv4         = each.value.cidr
-}
-
-resource "aws_vpc_security_group_egress_rule" "app_security_group_egress_rule" {
-  security_group_id = aws_security_group.app_security_group.id
-  ip_protocol       = "-1"
-  description       = "All outbound traffic"
-  cidr_ipv4         = "0.0.0.0/0"
-}
-
 resource "aws_security_group" "lb_security_group" {
   name_prefix = "${var.full_name}-lb-sg"
   vpc_id      = var.vpc_id
@@ -65,12 +27,39 @@ resource "aws_vpc_security_group_ingress_rule" "lb_security_group_ingress_rule" 
   from_port         = 443
   to_port           = 443
   ip_protocol       = "tcp"
-  description       = "HTTPS traffic"
+  description       = "HTTPS Client traffic"
   cidr_ipv4         = each.value
 }
 
 resource "aws_vpc_security_group_egress_rule" "lb_security_group_egress_rule" {
   security_group_id = aws_security_group.lb_security_group.id
+  ip_protocol       = "-1"
+  description       = "All outbound traffic"
+  cidr_ipv4         = "0.0.0.0/0"
+}
+
+resource "aws_security_group" "app_security_group" {
+  name_prefix = "${var.full_name}-app-sg"
+  vpc_id      = var.vpc_id
+
+  tags = merge(
+    { Name = "${var.full_name}-sg" },
+    var.tags
+  )
+}
+
+resource "aws_vpc_security_group_ingress_rule" "app_security_group_ingress_rule" {
+  for_each = toset([for port in var.container_ports : tostring(port)])
+  security_group_id             = aws_security_group.app_security_group.id
+  from_port                     = tonumber(each.value)
+  to_port                       = tonumber(each.value)
+  ip_protocol                   = "tcp"
+  description                   = "HTTP ALB traffic"
+  referenced_security_group_id  = aws_security_group.lb_security_group.id
+}
+
+resource "aws_vpc_security_group_egress_rule" "app_security_group_egress_rule" {
+  security_group_id = aws_security_group.app_security_group.id
   ip_protocol       = "-1"
   description       = "All outbound traffic"
   cidr_ipv4         = "0.0.0.0/0"
@@ -163,8 +152,11 @@ resource "aws_lb_target_group" "lb_target_group" {
   protocol = "HTTP"
   vpc_id   = var.vpc_id
 
-  # load balancer health checks should always be done on all ports
+  # only enable health checks when the ALB is deployed in a public subnet
+  # a bug occurs when the ALB is deployed in a private subnet
+  # which causes the health checks to fail
   health_check {
+    enabled  = var.lb_subnet_ids != var.app_subnet_ids
     path     = "/"
     port     = tonumber(each.value)
     matcher  = "200,404"
@@ -258,9 +250,6 @@ resource "aws_ecs_task_definition" "ecs_task_definition" {
       ]
       healthCheck = var.enable_container_health_checks ? {
         command  =  ["CMD-SHELL", var.health_check_command]
-        interval    = 10
-        timeout     = 5
-        retries     = 3
         startPeriod = 30
         } : null
 

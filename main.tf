@@ -152,15 +152,22 @@ resource "aws_lb_target_group" "lb_target_group" {
   protocol = "HTTP"
   vpc_id   = var.vpc_id
 
-  # only enable health checks when the ALB is deployed in a public subnet
-  # a bug occurs when the ALB is deployed in a private subnet
-  # which causes the health checks to fail
   health_check {
-    enabled  = var.lb_subnet_ids != var.app_subnet_ids
     path     = "/"
     port     = tonumber(each.value)
     matcher  = "200,404"
     protocol = "HTTP"
+  }
+
+  # only terminate unhealthy connections when the ALB is deployed in a public subnet
+  # a bug occurs when the ALB is deployed in a private subnet
+  # which causes the health checks to always fail
+
+  dynamic "target_health_state" {
+    for_each = var.lb_subnet_ids == var.app_subnet_ids ? [1] : []
+    content {
+      enable_unhealthy_connection_termination = false
+    }
   }
 }
 
